@@ -1,59 +1,50 @@
 import {Request, Response} from "express";
-import {authService} from "./auth.service.js";
+import {userService} from "./services/user.service.js";
 import {v4 as uuidv4} from "uuid";
+import {checkpointUserService} from "./services/checkpoint.service";
 
 class AuthController {
     //object representing the queue of checkpoint handlers
-    pipeline
-    authService
+    userService
+    checkpointService
 
-    constructor(auth_pipeline: any, authService: any) {
-        this.pipeline = auth_pipeline
-        this.authService = authService
+    constructor(userService: any, checkpointService: any) {
+        this.userService = userService
+        this.checkpointService = checkpointService
     }
 
-    //Registration handling
-    getPipeline = async (req: Request, res: Response) => {
+    async basic(req: Request, res: Response) {
         try {
-            //later rework to give names
-            res.status(200).json({pipeline: this.pipeline.toString()})
+            //validation
+            const {email, password} = req.body
+            //write user data to db
+            const user = await this.userService.create(email, password)
+            //register checkpoint
+            const checkpoint = await this.checkpointService.initiate(user, 'basic')
+            //generate token
+            //send in email
+            //leave temp data in checkpoint
+            await this.checkpointService.leaveTemp(checkpoint,)
         } catch (err: any) {
             console.log(err)
             res.status(500).json({message: err.message})
         }
     }
 
-    initiateTransaction = async (req: Request, res: Response) => {
-        res.status(200).json({index: uuidv4()})
-    }
-
-    accessCheckpoint = async (req: Request, res: Response) => {
+    async activateEmail(req: Request, res: Response) {
         try {
-            const point = req.params.point
-            const {index, payload} = req.body
-            //check if all previous points have been completed
-            // this.authService.checkTransaction(index, point)
-            //call the current checkpoint handler
-            await this.pipeline[point](payload, index)
-            res.status(200).json({message:"Successfully completed this checkpoint"})
+            const token = req.params.token
+            const checkpoint = req.params.checkpoint
+            const expected = await this.checkpointService.checkTemp(checkpoint)
+            //check token validity and return results
+
         } catch (err: any) {
             console.log(err)
             res.status(500).json({message: err.message})
         }
     }
 
-    finishTransaction = async (req: Request, res: Response) => {
-        try {
-            const {index} = req.body
-            await this.authService.save(index)
-            res.status(200).json({message:"Successfully completed all the checkpoints"})
-        } catch (err: any) {
-            console.log(err)
-            res.status(500).json({message: err.message})
-        }
-    }
+
 }
 
-export const authController = new AuthController({
-    basic: authService.basic
-}, authService)
+export const authController = new AuthController(userService, checkpointUserService)
