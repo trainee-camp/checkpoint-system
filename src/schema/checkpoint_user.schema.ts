@@ -13,4 +13,6 @@ export class CheckpointUser {
     temp_data: string
     @Column({default: false})
     finished: boolean
+    @Column()
+    createdAt: Date
 }

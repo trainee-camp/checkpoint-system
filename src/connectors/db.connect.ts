@@ -1,15 +1,16 @@
 import {DataSource} from "typeorm";
 import {config} from "dotenv";
 import {User} from "../schema/user.schema.js";
-import {Checkpoint} from "../schema/checkpoint.schema";
-import {CheckpointUser} from "../schema/checkpoint_user.schema";
+import {Checkpoint} from "../schema/checkpoint.schema.js";
+import {CheckpointUser} from "../schema/checkpoint_user.schema.js";
 
 config()
 export const dataSource = new DataSource({
     type: "postgres",
     url: process.env.PSQL_CONNECTION_STRING,
     entities: [User, Checkpoint, CheckpointUser],
-    synchronize: true
+    synchronize: true,
+    // dropSchema:true
 })
 
 const initDS = await dataSource.initialize()

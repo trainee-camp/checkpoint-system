@@ -21,6 +21,9 @@ class UserService {
     }
 
     async create(data: Credentials_IF) {
+        if (await this.repo.findOneBy({email: data.email})) {
+            throw new Error('Email in use')
+        }
         const user = new User()
         user.email = data.email
         user.password = await bcrypt.hash(data.password, bcryptConf.saltRounds)

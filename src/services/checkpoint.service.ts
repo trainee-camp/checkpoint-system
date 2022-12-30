@@ -2,9 +2,9 @@ import {Repository} from "typeorm";
 import {User} from "../schema/user.schema";
 import {Credentials_IF, UserDataVaried} from "../interfaces/user.interface";
 import bcrypt from "bcrypt";
-import {dataSource} from "../connectors/db.connect";
-import {CheckpointUser} from "../schema/checkpoint_user.schema";
-import {Checkpoint} from "../schema/checkpoint.schema";
+import {dataSource} from "../connectors/db.connect.js";
+import {CheckpointUser} from "../schema/checkpoint_user.schema.js";
+import {Checkpoint} from "../schema/checkpoint.schema.js";
 
 class CheckpointUserService {
     repo: Repository<CheckpointUser>
@@ -25,12 +25,17 @@ class CheckpointUserService {
 
     async initiate(user: string, checkpoint: string) {
         const point = new CheckpointUser()
-        point.user = user
         const checkpointId = await this.checkpointRepo.findOneBy({name: checkpoint})
         if (!checkpointId) {
             throw new Error('No such Checkpoint found in Database')
         }
+        const exists = await this.repo.findOneBy({checkpoint: checkpointId.id, user: user})
+        if (exists) {
+            return exists.id
+        }
+        point.user = user
         point.checkpoint = checkpointId.id
+        point.createdAt = new Date()
         const saved = await this.repo.save(point)
         return saved.id
     }
@@ -43,7 +48,7 @@ class CheckpointUserService {
     //get temp data
     async checkTemp(id: string) {
         return this.repo.findOne({
-            where: {id: id}, select: {
+            where: {id: id}, order: {}, select: {
                 temp_data: true
             }
         })

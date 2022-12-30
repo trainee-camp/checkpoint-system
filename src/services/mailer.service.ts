@@ -13,20 +13,23 @@ class Mailer {
     }
 
     async send(to: string, subject: string, plain: string, html?: string) {
-        await this.transport.sendMail({
+        const message = {
             from: this.sender,
             to: to,
             subject: subject,
             text: plain,
             html: html ? html : undefined
-        })
+        }
+        console.log(message)
+        await this.transport.sendMail(message)
     }
 }
 
 export const mailerService = new Mailer(nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.sendgrid.net',
+    port: 587,
     auth: {
-        user: process.env.GMAIL_AUTH,
-        pass: process.env.GMAIL_PASS
+        user: "apikey",
+        pass: process.env.SENDGRID_API_KEY
     }
-}), "Someone")
+}), `<${String(process.env.SENDGRID_SENDER_EMAIL)}>`)
