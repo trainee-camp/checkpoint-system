@@ -2,7 +2,7 @@ import {DataSource} from "typeorm";
 import {config} from "dotenv";
 import {User} from "../schema/user.schema.js";
 import {Checkpoint} from "../schema/checkpoint.schema.js";
-import {CheckpointUser} from "../schema/checkpoint_user.schema.js";
+import {CheckpointUser} from "../schema/checkpoint-user.schema.js";
 
 config()
 export const dataSource = new DataSource({

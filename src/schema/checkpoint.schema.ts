@@ -1,5 +1,5 @@
 import {Column, Entity, OneToMany, PrimaryGeneratedColumn} from "typeorm";
-import {CheckpointUser} from "./checkpoint_user.schema";
+import {CheckpointUser} from "./checkpoint-user.schema";
 
 @Entity()
 export class Checkpoint {

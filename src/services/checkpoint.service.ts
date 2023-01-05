@@ -1,9 +1,6 @@
 import {Repository} from "typeorm";
-import {User} from "../schema/user.schema";
-import {Credentials_IF, UserDataVaried} from "../interfaces/user.interface";
-import bcrypt from "bcrypt";
 import {dataSource} from "../connectors/db.connect.js";
-import {CheckpointUser} from "../schema/checkpoint_user.schema.js";
+import {CheckpointUser} from "../schema/checkpoint-user.schema.js";
 import {Checkpoint} from "../schema/checkpoint.schema.js";
 
 class CheckpointUserService {
@@ -15,10 +12,18 @@ class CheckpointUserService {
         this.checkpointRepo = checkpointRepo
     }
 
+    //assure existence of checkpoint entities specified according to a provided set
+    async define(checkpoints: Set<string>) {
+        for (const name of checkpoints) {
+            if (!await this.checkpointRepo.findOneBy({name}))
+                await this.checkpointRepo.save({name})
+        }
+    }
+
     async find(user: string, checkpoint: string) {
         const checkpointId = await this.checkpointRepo.findOneBy({name: checkpoint})
         if (!checkpointId) {
-            throw new Error('No such Checkpoint found in Database')
+            return
         }
         return this.repo.findOne({where: {user: user, checkpoint: checkpointId.id}, select: {id: true}})
     }
@@ -68,4 +73,7 @@ class CheckpointUserService {
 
 }
 
-export const checkpointUserService = new CheckpointUserService(dataSource.getRepository(CheckpointUser), dataSource.getRepository(Checkpoint))
+export const checkpointUserService = new CheckpointUserService(
+    dataSource.getRepository(CheckpointUser),
+    dataSource.getRepository(Checkpoint),
+)

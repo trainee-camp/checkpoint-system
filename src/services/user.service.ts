@@ -20,9 +20,9 @@ class UserService {
         return this.repo.findOneBy({id: id})
     }
 
-    async create(data: Credentials_IF) {
+    async create(data: Credentials_IF): Promise<string | undefined> {
         if (await this.repo.findOneBy({email: data.email})) {
-            throw new Error('Email in use')
+            return undefined
         }
         const user = new User()
         user.email = data.email
@@ -31,8 +31,12 @@ class UserService {
         return saved.id
     }
 
-    async edit(id: string, data: UserDataVaried) {
+    async edit(id: string, data: UserDataVaried): Promise<boolean> {
+        if (!await this.repo.findOneBy({id: id})) {
+            return false
+        }
         await this.repo.update({id: id}, {...data})
+        return true
     }
 
     async delete(id: string) {

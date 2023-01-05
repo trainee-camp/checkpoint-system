@@ -1,5 +1,5 @@
 import {Column, Entity, JoinTable, ManyToOne, OneToMany, PrimaryGeneratedColumn} from "typeorm";
-import {CheckpointUser} from "./checkpoint_user.schema.js";
+import {CheckpointUser} from "./checkpoint-user.schema.js";
 
 @Entity()
 export class User {
