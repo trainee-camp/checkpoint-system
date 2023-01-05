@@ -10,7 +10,7 @@ export const dataSource = new DataSource({
     url: process.env.PSQL_CONNECTION_STRING,
     entities: [User, Checkpoint, CheckpointUser],
     synchronize: true,
-    // dropSchema:true
+    dropSchema:true
 })
 
 const initDS = await dataSource.initialize()
