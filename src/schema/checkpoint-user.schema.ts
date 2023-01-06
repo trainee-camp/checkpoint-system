@@ -8,9 +8,9 @@ export class CheckpointUser {
     user: string
     @Column()
     checkpoint: string
-    @Column({nullable: true})
+    @Column({type: "text", nullable: true})
         //various temporary data needed for checkpoint verification ( a token for email verification e.g.)
-    temp_data: string
+    temp_data: string | null
     @Column({default: false})
     finished: boolean
     @Column()

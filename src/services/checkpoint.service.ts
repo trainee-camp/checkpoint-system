@@ -67,7 +67,7 @@ class CheckpointUserService {
 
     //delete temp data
     async clearTemp(id: string) {
-        await this.repo.update({id: id}, {temp_data: undefined})
+        await this.repo.update({id: id}, {temp_data: null})
     }
 
 

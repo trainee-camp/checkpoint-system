@@ -3,6 +3,9 @@ import {userService} from "./services/user.service.js";
 import {checkpointUserService} from "./services/checkpoint.service.js";
 import crypto from "crypto";
 import {mailerService} from "./services/mailer.service.js";
+import {config} from "dotenv";
+
+config()
 
 //Provides controller functions for checkpoints,as well as order of checkpoint walkthrough
 class AuthController {
@@ -76,8 +79,8 @@ class AuthController {
         //generate token
         const token = crypto.randomBytes(64).toString('hex');
         //send in email
-        // const generatedUrl = process.env.HOSTNAME = '/auth/verify/email/' + checkpoint + '/' + token
-        // await this.mailerService.send(email, "Account verification", "Pass by this link:", "<a href='" + generatedUrl + "'/>")
+        const generatedUrl = process.env.HOSTNAME + '/auth/verify/email/' + checkpoint + '/' + token
+        await this.mailerService.send(email, "Account verification", generatedUrl)
         //leave temp data in checkpoint
         await this.checkpointService.leaveTemp(checkpoint, token)
         //send response with next checkpoint name for the callback on the client side
@@ -124,6 +127,23 @@ class AuthController {
 
         })
     }
+    //check if all checkpoints have been activated, activate the account
+    finish = async (req: Request, res: Response) => {
+        try {
+            const user = req.body.id
+            for (const name of this.order) {
+                const checkpoint = await this.checkpointService.find(user, name)
+                if (!checkpoint.finished) {
+                    return res.status(401).json({message: "Complete all checkpoints!"})
+                }
+            }
+            await this.userService.edit(user, {activated: true})
+        } catch (err: any) {
+            console.log(err)
+            res.status(500).json({message: err.message})
+        }
+
+    }
     //todo: different controller ?
 //Checkpoint verification
     activateEmail = async (req: Request, res: Response) => {
@@ -132,7 +152,7 @@ class AuthController {
             const checkpoint = req.params.checkpoint
             //check if token received with url is the one that was sent to the email address
             const expected = await this.checkpointService.checkTemp(checkpoint)
-            if (token !== expected.temp_data) {
+            if (!expected || token !== expected.temp_data) {
                 return res.status(401).json({message: 'Incorrect token'})
             }
             //complete the checkpoint and clear the temporary data

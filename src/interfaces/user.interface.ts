@@ -15,7 +15,7 @@ export interface UserDataVaried {
     phone?: string
     address?: string
     bankAccount?: string
-
+    activated?:boolean
 }
 
 export function isUser(object: any): object is User_IF {
