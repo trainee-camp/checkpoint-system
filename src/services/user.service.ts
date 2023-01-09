@@ -21,7 +21,8 @@ class UserService {
     }
 
     async create(data: Credentials_IF): Promise<string | undefined> {
-        if (await this.repo.findOneBy({email: data.email})) {
+        const found = await this.repo.findOneBy({email: data.email})
+        if (found) {
             return undefined
         }
         const user = new User()
@@ -32,7 +33,8 @@ class UserService {
     }
 
     async edit(id: string, data: UserDataVaried): Promise<boolean> {
-        if (!await this.repo.findOneBy({id: id})) {
+        const found = await this.repo.findOneBy({id: id})
+        if (!found) {
             return false
         }
         await this.repo.update({id: id}, {...data})

@@ -16,7 +16,7 @@ class AuthController {
     //Maps controller functions to checkpoint names
     map: Map<string, any>
     //Defines the order in which the checkpoints should be completed
-    order: Set<string>
+    order: Array<string>
 
     constructor(userService: any, checkpointService: any, mailerService: any) {
         this.userService = userService
@@ -30,7 +30,7 @@ class AuthController {
             ['address', this.fillAddress],
             ['account', this.fillBankAccount]
         ])
-        this.order = new Set(['basic', 'profile', 'phone', 'address', 'account'])
+        this.order = Array.from(new Set(['basic', 'profile', 'phone', 'address', 'account']))
 
         this.checkpointService.define(this.order)
     }
@@ -41,16 +41,16 @@ class AuthController {
             const currentPoint = req.params.checkpoint
             const user = req.body.id
             //check completion if id is provided ( basic authentication completed)
-            if (user) {
-                for (const name of this.order) {
-                    if (name === currentPoint) {
-                        break
-                    }
-                    if (!await this.checkpointService.find(user, name)) {
-                        return res.status(401).json({message: "Complete previous checkpoints first!"})
-                    }
-                }
+            if (!user) {
+                return res.status(401).json({message: "Complete previous checkpoints first!"})
             }
+            const checkpointNum = this.order.find(name => name === currentPoint)
+            await Promise.all(this.order.slice(0, Number(checkpointNum)).map(async name => {
+                const found = await this.checkpointService.find(user, name)
+                if (!found) {
+                    return res.status(401).json({message: "Complete previous checkpoints first!"})
+                }
+            }))
             //find next checkpoint name
             const order = this.order.values()
             let nextPoint = order.next()
@@ -64,6 +64,7 @@ class AuthController {
             res.status(500).json({message: err.message})
         }
     }
+
 //initial checkpoint that creates the user based on credentials
     basic = async (req: Request, res: Response, nextPoint: string) => {
         //parse request data
@@ -127,16 +128,16 @@ class AuthController {
 
         })
     }
-    //check if all checkpoints have been activated, activate the account
+//check if all checkpoints have been activated, activate the account
     finish = async (req: Request, res: Response) => {
         try {
             const user = req.body.id
-            for (const name of this.order) {
+            await Promise.all(this.order.map(async name => {
                 const checkpoint = await this.checkpointService.find(user, name)
                 if (!checkpoint.finished) {
                     return res.status(401).json({message: "Complete all checkpoints!"})
                 }
-            }
+            }))
             await this.userService.edit(user, {activated: true})
         } catch (err: any) {
             console.log(err)
@@ -144,7 +145,7 @@ class AuthController {
         }
 
     }
-    //todo: different controller ?
+//todo: different controller ?
 //Checkpoint verification
     activateEmail = async (req: Request, res: Response) => {
         try {

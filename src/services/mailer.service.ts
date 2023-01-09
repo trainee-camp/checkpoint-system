@@ -18,7 +18,6 @@ class Mailer {
             to: to,
             subject: subject,
             text: plain,
-            // html: html ? html : undefined
         }
         console.log(message)
         await this.transport.sendMail(message)
@@ -27,11 +26,11 @@ class Mailer {
 
 export const mailerService = new Mailer(
     nodemailer.createTransport({
-        host: 'smtp.sendgrid.net',
-        port: 587,
+        host: String(process.env.SMTP_SERVER),
+        port: Number(process.env.SMTP_SERVER_PORT),
         auth: {
             user: "apikey",
-            pass: process.env.SENDGRID_API_KEY
+            pass: String(process.env.SENDGRID_API_KEY)
         }
     }),
     `<${String(process.env.SENDGRID_SENDER_EMAIL)}>`)

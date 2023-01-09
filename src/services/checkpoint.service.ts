@@ -13,12 +13,13 @@ class CheckpointUserService {
     }
 
     //assure existence of checkpoint entities specified according to a provided set
-    async define(checkpoints: Set<string>) {
-        for (const name of checkpoints) {
-            if (!await this.checkpointRepo.findOneBy({name}))
-                await this.checkpointRepo.save({name})
-        }
+    async define(checkpoints: Array<string>) {
+        await Promise.all(checkpoints.map(async name => {
+            const found = await this.checkpointRepo.findOneBy({name})
+            if (!found) await this.checkpointRepo.save({name})
+        }))
     }
+
 
     async find(user: string, checkpoint: string) {
         const checkpointId = await this.checkpointRepo.findOneBy({name: checkpoint})
