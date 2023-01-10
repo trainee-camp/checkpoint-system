@@ -4,6 +4,7 @@ import {checkpointUserService} from "./services/checkpoint.service.js";
 import crypto from "crypto";
 import {mailerService} from "./services/mailer.service.js";
 import {config} from "dotenv";
+import axios from "axios";
 
 config()
 
@@ -25,10 +26,10 @@ class AuthController {
         //add custom checkpoints here
         this.map = new Map([
             ['basic', this.basic],
-            ['profile', this.fillProfile],
-            ['phone', this.fillPhone],
-            ['address', this.fillAddress],
-            ['account', this.fillBankAccount]
+            ['profile', this.fillData],
+            ['phone', this.fillData],
+            ['address', this.fillData],
+            ['account', this.fillData]
         ])
         this.order = Array.from(new Set(['basic', 'profile', 'phone', 'address', 'account']))
 
@@ -40,7 +41,7 @@ class AuthController {
         try {
             const currentPoint = req.params.checkpoint
             const user = req.body.id
-            //check completion if id is provided ( basic authentication completed)
+            //check previous checkpoints completion if id is provided ( basic authentication completed)
             if (!user) {
                 return res.status(401).json({message: "Complete previous checkpoints first!"})
             }
@@ -51,14 +52,21 @@ class AuthController {
                     return res.status(401).json({message: "Complete previous checkpoints first!"})
                 }
             }))
-            //find next checkpoint name
-            const order = this.order.values()
-            let nextPoint = order.next()
-            while (nextPoint.value !== currentPoint) {
-                nextPoint = order.next()
+            //start completing other checkpoints starting from the current
+            //initial data received with request
+            let clientData = {...req.body, currentPoint}
+            const {CLIENT, CLIENT_CHECKPOINT_EP} = process.env
+            for (const [name, func] of this.map) {
+                //call the function for checkpoint
+                const dataOperation = await func.call(this, clientData, res)
+                if (!dataOperation) {
+                    return
+                }
+                //get further data from client for the next checkpoint
+                const nextPoint = this.order[this.order.findIndex(point => point === currentPoint)]
+                clientData = await axios.get(`${CLIENT}/${CLIENT_CHECKPOINT_EP}/${nextPoint}`)
+                clientData.currentPoint = nextPoint
             }
-            //pass data about next checkpoint into the function to be sent to client
-            return this.map.get(currentPoint).call(this, req, res, order.next().value)
         } catch (err: any) {
             console.log(err)
             res.status(500).json({message: err.message})
@@ -66,14 +74,14 @@ class AuthController {
     }
 
 //initial checkpoint that creates the user based on credentials
-    basic = async (req: Request, res: Response, nextPoint: string) => {
+    basic = async (reqData: any, res: Response) => {
         //parse request data
-        const {email, password} = req.body
-        const currentPoint = req.params.checkpoint
+        const {email, password, currentPoint} = reqData
         //write user data to db
         const user = await this.userService.create({email, password})
         if (!user) {
-            return res.status(401).json({message: 'Email already in use'})
+            res.status(401).json({message: 'Email already in use'})
+            return
         }
         //register checkpoint
         const checkpoint = await this.checkpointService.initiate(user, currentPoint)
@@ -85,49 +93,28 @@ class AuthController {
         //leave temp data in checkpoint
         await this.checkpointService.leaveTemp(checkpoint, token)
         //send response with next checkpoint name for the callback on the client side
-        res.status(200).json({message: "Sent verification email, you can continue for now", id: user, nextPoint})
+        // res.status(200).json({message: "Sent verification email, you can continue for now", id: user})
+        return 1
     }
 //general function to fill in data for a user, callback receives a function to prepare for verification for specific checkpoint
-    fillData = async (req: Request, res: Response, nextPoint: string, cb: any) => {
+    fillData = async (reqData: any, res: Response, verificator: any) => {
         //parse request data
-        const {id, data} = req.body
-        const currentPoint = req.params.checkpoint
+        const {id, data, currentPoint} = reqData
         //write data to db
         const user = await this.userService.edit(id, {...data})
         if (!user) {
-            return res.status(404).json({message: "No such user exists"})
+            res.status(404).json({message: "No such user exists"})
+            return
         }
         //do checkpoint specific actions
-        await cb()
+        await verificator()
         //register checkpoint
         await this.checkpointService.initiate(id, currentPoint)
         //send response with next checkpoint name for the callback
-        res.status(200).json({message: "Updated user data", id, nextPoint})
-    }
-//Checkpoint specific functions which provide callbacks for verification (in progress)
-    fillProfile = async (req: Request, res: Response, nextPoint: string) => {
-        return this.fillData(req, res, nextPoint, async () => {
-
-        })
+        // res.status(200).json({message: "Updated user data", id})
+        return 1
     }
 
-    fillPhone = async (req: Request, res: Response, nextPoint: string) => {
-        return this.fillData(req, res, nextPoint, async () => {
-
-        })
-    }
-
-    fillAddress = async (req: Request, res: Response, nextPoint: string) => {
-        return this.fillData(req, res, nextPoint, async () => {
-
-        })
-    }
-
-    fillBankAccount = async (req: Request, res: Response, nextPoint: string) => {
-        return this.fillData(req, res, nextPoint, async () => {
-
-        })
-    }
 //check if all checkpoints have been activated, activate the account
     finish = async (req: Request, res: Response) => {
         try {
